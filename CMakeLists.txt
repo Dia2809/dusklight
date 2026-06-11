@@ -139,6 +139,7 @@ add_subdirectory(libs/freeverb)
 
 option(DUSK_BUILD_WARNINGS "Enable compiler warnings (off by default)")
 option(DUSK_SELECTED_OPT "If on, selected parts of the project will be compiled with optimizations on Debug, intending to make the game run at 30 FPS. Note for MSVC: you will need to remove '/RTC1' from your debug flags in CMake.")
+option(DUSK_RK3326_OPT "Enable ARM Cortex-A35 (RK3326) specific build optimizations targeting 20 FPS on Mali-G31" OFF)
 option(DUSK_MOVIE_SUPPORT "If on, compile against libjpeg-turbo to enable THP file decoding" ON)
 option(DUSK_ENABLE_UPDATE_CHECKER "Enable update checking support" ON)
 option(DUSK_ENABLE_SENTRY_NATIVE "Enable sentry-native crash reporting support" OFF)
@@ -297,6 +298,41 @@ endif ()
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _arch)
 if(_arch MATCHES "^(arm|aarch64)" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
     add_compile_options(-fsigned-char)
+endif()
+
+if (DUSK_RK3326_OPT)
+    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU" AND _arch MATCHES "^(arm|aarch64)")
+        # Architecture flags: tune for the Cortex-A35's in-order pipeline (RK3326 / RK3566 etc.)
+        if (_arch MATCHES "^aarch64")
+            set(_rk3326_arch_flags -march=armv8-a+crc+simd -mtune=cortex-a35)
+        else()
+            # 32-bit ARM fallback (uncommon for modern RK3326 Linux)
+            set(_rk3326_arch_flags -march=armv8-a -mfpu=neon-fp-armv8 -mfloat-abi=hard -mtune=cortex-a35)
+        endif()
+
+        add_compile_options(
+            ${_rk3326_arch_flags}
+            # Free up a register on the register-starved A35
+            -fomit-frame-pointer
+            # Safe fast-math subset: enables NEON auto-vectorization of float loops and reciprocal
+            # approximations without the risky -ffinite-math-only (which breaks NaN/inf checks).
+            -fno-math-errno
+            -funsafe-math-optimizations
+            # Strip unreachable code/data — improves I-cache hit rate on the A35's small L1
+            -ffunction-sections
+            -fdata-sections
+        )
+        add_link_options(-Wl,--gc-sections)
+
+        # LTO: whole-program inlining across translation units.
+        # Use -flto=auto to use all available parallelism on the build host.
+        add_compile_options(-flto=auto)
+        add_link_options(-flto=auto)
+
+        message(STATUS "dusklight: RK3326 optimizations enabled (Cortex-A35, NEON fast-math, LTO, --gc-sections)")
+    else()
+        message(WARNING "DUSK_RK3326_OPT is ON but requires a GCC/Clang GNU-frontend targeting arm or aarch64 — flags not applied")
+    endif()
 endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
@@ -600,6 +636,12 @@ if (DUSK_SELECTED_OPT)
         set(_opt_flags /O2 /Ob2)
     elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
         set(_opt_flags -O2)
+        # In an RK3326 build the global compile options already include the arch/fast-math
+        # flags, but add them explicitly here too so these targets benefit even when
+        # DUSK_RK3326_OPT is paired with a Debug host build.
+        if (DUSK_RK3326_OPT AND _arch MATCHES "^(arm|aarch64)")
+            list(APPEND _opt_flags ${_rk3326_arch_flags} -fno-math-errno -funsafe-math-optimizations)
+        endif()
     endif ()
 
     target_compile_options(xxhash PRIVATE ${_opt_flags})

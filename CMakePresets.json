@@ -107,6 +107,37 @@
       ]
     },
     {
+      "name": "linux-rk3326",
+      "displayName": "Linux RK3326 (ARM Cortex-A35, Release)",
+      "description": "Optimized Release build for RK3326/RK3566 handheld devices (Mali-G31 GPU). Targets ≥20 FPS across all scenes. Requires an ARM64 GCC/Clang toolchain.",
+      "inherits": [
+        "linux-default"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "DUSK_RK3326_OPT": {
+          "type": "BOOL",
+          "value": true
+        },
+        "DUSK_SELECTED_OPT": {
+          "type": "BOOL",
+          "value": true
+        },
+        "DUSK_ENABLE_DISCORD": {
+          "type": "BOOL",
+          "value": false
+        },
+        "DUSK_MOVIE_SUPPORT": {
+          "type": "BOOL",
+          "value": false
+        },
+        "DUSK_ENABLE_UPDATE_CHECKER": {
+          "type": "BOOL",
+          "value": false
+        }
+      }
+    },
+    {
       "name": "windows-msvc",
       "displayName": "Windows (MSVC)",
       "generator": "Ninja",

@@ -24,6 +24,36 @@ void applyPresetClassic() {
     AuroraSetViewportPolicy(AURORA_VIEWPORT_FIT);
 }
 
+void applyPresetPerformance() {
+    auto& s = getSettings();
+    // Graphics: disable every multi-pass effect to minimise GPU workload
+    s.game.bloomMode.setValue(BloomMode::Off);
+    s.game.depthOfFieldMode.setValue(DepthOfFieldMode::Off);
+    // internalResolutionScale=0 means "match display resolution" — on a ~480×320
+    // handheld screen this renders fewer pixels than the default 608×448 game res.
+    s.game.internalResolutionScale.setValue(0);
+    s.game.shadowResolutionMultiplier.setValue(1);
+    s.game.disableWaterRefraction.setValue(true);
+    s.game.enableTextureReplacements.setValue(false);
+    s.game.resampler.setValue(Resampler::Bilinear);
+    // Frame pacing: Capped at 20 fps so the game simulation still runs at the
+    // correct 30 Hz rate (the clock runs 1–2 sim ticks per render frame to stay
+    // on schedule) while the GPU only has to present 20 frames per second.
+    s.game.enableFrameInterpolation.setValue(FrameInterpMode::Capped);
+    s.video.maxFrameRate.setValue(20);
+    s.video.enableVsync.setValue(false);
+    s.video.lockAspectRatio.setValue(true);
+    // Audio: disable DSP-heavy post-processing
+    s.audio.enableReverb.setValue(false);
+    s.audio.enableHrtf.setValue(false);
+    // UI / misc
+    s.game.hideTvSettingsScreen.setValue(true);
+    s.game.enableAchievementToasts.setValue(false);
+    s.game.enableControllerToasts.setValue(false);
+    s.game.menuScalingMode.setValue(MenuScaling::GameCube);
+    AuroraSetViewportPolicy(AURORA_VIEWPORT_FIT);
+}
+
 void applyPresetDusk() {
     auto& s = getSettings();
     s.game.hideTvSettingsScreen.setValue(true);
@@ -92,6 +122,10 @@ PresetWindow::PresetWindow() : WindowSmall("modal", "modal-dialog") {
          "Graphics & quality of life tweaks, including some from the Wii U version. "
          "Our recommended way to play!",
          applyPresetDusk},
+        {"Performance",
+         "All expensive effects disabled, 20 FPS cap with correct game speed. "
+         "For RK3326/RK3566 handhelds and other low-power devices.",
+         applyPresetPerformance},
     };
 
     for (const auto& preset : kPresets) {

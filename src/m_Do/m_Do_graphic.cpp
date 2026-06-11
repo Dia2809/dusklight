@@ -1032,6 +1032,10 @@ static void drawDepth2(view_class* param_0, view_port_class* param_1, int param_
     static GXColorS10 l_tevColor0 = {0, 0, 0, 0};
 
     if (daPy_getLinkPlayerActorClass() != NULL) {
+#if TARGET_PC
+        if (dusk::getSettings().game.depthOfFieldMode.getValue() == dusk::DepthOfFieldMode::Off)
+            return;
+#endif
         u8 sp8 = 1;
         #if DEBUG
         if (g_envHIO.mOther.mDepthOfField)
@@ -2477,6 +2481,9 @@ int mDoGph_Painter() {
                 #endif
 
                 GX_DEBUG_GROUP(drawDepth2, &camera_p->view, view_port, dComIfGp_getCameraZoomForcus(camera_id));
+#if TARGET_PC
+                if (dusk::getSettings().game.depthOfFieldMode.getValue() != dusk::DepthOfFieldMode::Off)
+#endif
                 GXInvalidateTexAll();
                 GXSetClipMode(GX_CLIP_ENABLE);
 

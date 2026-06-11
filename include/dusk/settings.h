@@ -49,6 +49,11 @@ enum class FrameInterpMode : u8 {
     Off = 0,
     Capped = 1,
     Unlimited = 2,
+    // FrameSkip: maintains correct 30 Hz simulation at any render FPS by
+    // running 1–2 sim ticks per render frame, but suppresses actor draw
+    // callbacks during sim ticks so J3D traversal only happens once per
+    // presented frame.  No interpolation overhead; renders latest sim state.
+    FrameSkip = 3,
 };
 
 enum class MenuScaling : u8 {
@@ -97,7 +102,7 @@ struct ConfigEnumRange<GyroMode> {
 template <>
 struct ConfigEnumRange<FrameInterpMode> {
     static constexpr auto min = FrameInterpMode::Off;
-    static constexpr auto max = FrameInterpMode::Unlimited;
+    static constexpr auto max = FrameInterpMode::FrameSkip;
 };
 
 template <>

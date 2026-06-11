@@ -36,10 +36,12 @@ void applyPresetPerformance() {
     s.game.disableWaterRefraction.setValue(true);
     s.game.enableTextureReplacements.setValue(false);
     s.game.resampler.setValue(Resampler::Bilinear);
-    // Frame pacing: Capped at 20 fps so the game simulation still runs at the
-    // correct 30 Hz rate (the clock runs 1–2 sim ticks per render frame to stay
-    // on schedule) while the GPU only has to present 20 frames per second.
-    s.game.enableFrameInterpolation.setValue(FrameInterpMode::Capped);
+    // Frame pacing: FrameSkip at 20 fps.
+    // The game clock still advances at 30 Hz (1–2 sim ticks per render frame),
+    // but actor draw callbacks (J3D model traversal) are suppressed during sim
+    // ticks and only run once in the presentation pass — halving the main
+    // per-frame CPU cost vs Capped mode without any interpolation overhead.
+    s.game.enableFrameInterpolation.setValue(FrameInterpMode::FrameSkip);
     s.video.maxFrameRate.setValue(20);
     s.video.enableVsync.setValue(false);
     s.video.lockAspectRatio.setValue(true);

@@ -106,6 +106,12 @@ int fpcM_Delete(void* i_process);
 BOOL fpcM_IsCreating(fpc_ProcID i_id);
 void fpcM_Management(fpcM_ManagementFunc i_preExecuteFn, fpcM_ManagementFunc i_postExecuteFn);
 void fpcM_Init();
+#if TARGET_PC
+// Suppress fpcDw_Handler inside the next fpcM_Management call(s).
+// Used by FrameSkip mode so actor draw callbacks only run in the
+// presentation pass, not during every sim tick.
+void fpcM_SetSkipDraw(bool skip);
+#endif
 base_process_class* fpcM_FastCreate(s16 i_procname, FastCreateReqFunc i_createReqFunc,
                                     void* i_createData, void* i_append);
 int fpcM_IsPause(void* i_process, u8 i_flag);

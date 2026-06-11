@@ -285,10 +285,24 @@ void main01(void) {
         dusk::ui::update();
 
         const auto pacing = dusk::game_clock::advance_main_loop();
+        const auto frameInterpMode = dusk::getSettings().game.enableFrameInterpolation.getValue();
+
         if (pacing.is_interpolating) {
             if (pacing.sim_ticks_to_run > 0) {
-                dusk::frame_interp::begin_frame(dusk::getSettings().game.enableFrameInterpolation, true, 0.0f);
+                dusk::frame_interp::begin_frame(frameInterpMode, true, 0.0f);
                 dusk::frame_interp::set_ui_tick_pending(true);
+
+                // FrameSkip: suppress actor draw callbacks during sim ticks.
+                // fpcDw_Handler (J3D model traversal) is the most expensive per-tick
+                // cost.  With Capped mode it runs once per sim tick for matrix
+                // recording PLUS once more in the presentation pass — ~2.5× per
+                // render frame at 20 fps.  By skipping it here we reduce that to a
+                // single draw pass per rendered frame, halving the CPU load.
+                // The presentation pass below still runs the full draw + GPU render
+                // with the latest sim state, producing correct (non-interpolated) output.
+                if (frameInterpMode == dusk::FrameInterpMode::FrameSkip) {
+                    fpcM_SetSkipDraw(true);
+                }
 
                 for (int sim_tick = 0; sim_tick < pacing.sim_ticks_to_run; ++sim_tick) {
                     dusk::frame_interp::begin_sim_tick();
@@ -299,9 +313,13 @@ void main01(void) {
                     mDoAud_Execute();
                     dusk::game_clock::commit_sim_tick();
                 }
+
+                if (frameInterpMode == dusk::FrameInterpMode::FrameSkip) {
+                    fpcM_SetSkipDraw(false);
+                }
             }
 
-            dusk::frame_interp::begin_frame(dusk::getSettings().game.enableFrameInterpolation, false,
+            dusk::frame_interp::begin_frame(frameInterpMode, false,
                                             dusk::game_clock::sample_interpolation_step());
             dusk::frame_interp::interpolate();
             dusk::frame_interp::begin_presentation_camera();
@@ -330,7 +348,11 @@ void main01(void) {
         static double last_fps_setting = 0.0;
         static Limiter::duration_t target_ns = 0;
 
-        if (dusk::getSettings().game.enableFrameInterpolation.getValue() == dusk::FrameInterpMode::Capped && !dusk::getTransientSettings().skipFrameRateLimit) {
+        const bool cappedFps =
+            (frameInterpMode == dusk::FrameInterpMode::Capped ||
+             frameInterpMode == dusk::FrameInterpMode::FrameSkip) &&
+            !dusk::getTransientSettings().skipFrameRateLimit;
+        if (cappedFps) {
             double current_fps = dusk::getSettings().video.maxFrameRate.getValue();
             if (current_fps != last_fps_setting) {
                 last_fps_setting = current_fps;

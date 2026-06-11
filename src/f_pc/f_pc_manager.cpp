@@ -43,6 +43,11 @@ BOOL fpcM_IsCreating(fpc_ProcID i_id) {
     return fpcCt_IsCreatingByID(i_id);
 }
 
+#if TARGET_PC
+static bool s_skipDraw = false;
+void fpcM_SetSkipDraw(bool skip) { s_skipDraw = skip; }
+#endif
+
 void fpcM_Management(fpcM_ManagementFunc i_preExecuteFn, fpcM_ManagementFunc i_postExecuteFn) {
     ZoneScoped;
     MtxInit();
@@ -93,6 +98,9 @@ void fpcM_Management(fpcM_ManagementFunc i_preExecuteFn, fpcM_ManagementFunc i_p
                 fpcEx_Handler((fpcLnIt_QueueFunc)fpcM_Execute);
             }
 
+#if TARGET_PC
+            if (!s_skipDraw)
+#endif
             if (!fapGm_HIO_c::isCaptureScreen() || fapGm_HIO_c::getCaptureScreenDivH() != 1) {
                 fpcDw_Handler((fpcDw_HandlerFuncFunc)fpcM_DrawIterater, (fpcDw_HandlerFunc)fpcM_Draw);
             }

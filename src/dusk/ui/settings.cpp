@@ -62,6 +62,7 @@ constexpr std::array kInterpolationModes = {
     "Off",
     "Capped",
     "Unlimited",
+    "Frame Skip",
 };
 
 constexpr std::array kGyroInputModeLabels = {
@@ -901,7 +902,10 @@ SettingsWindow::SettingsWindow(bool prelaunch) : mPrelaunch(prelaunch) {
             });
         config_int_select(leftPane, rightPane, getSettings().video.maxFrameRate,
             "Framerate Cap", "Limit the framerate to the specified value.", 30, 540, 1,
-            [] { return getSettings().game.enableFrameInterpolation.getValue() != FrameInterpMode::Capped; });
+            [] {
+                const auto m = getSettings().game.enableFrameInterpolation.getValue();
+                return m != FrameInterpMode::Capped && m != FrameInterpMode::FrameSkip;
+            });
         config_bool_select(leftPane, rightPane, getSettings().game.enableMapBackground,
             {
                 .key = "Enable Mini-Map Shadows",
